@@ -1,4 +1,4 @@
-# RioLogManager
+# 619 RIO Log Manager
 
 A lightweight PyQt6 application designed for FRC teams to quickly synchronize and manage logs from a RoboRIO.
 
