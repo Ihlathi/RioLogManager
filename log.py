@@ -217,7 +217,10 @@ class MainWindow(QMainWindow):
         layout.setSpacing(25)
 
         # LEFT SIDE: Controls
-        left_panel = QVBoxLayout()
+        left_widget = QWidget()
+        left_widget.setFixedWidth(240)
+        left_panel = QVBoxLayout(left_widget)
+        left_panel.setContentsMargins(0, 0, 0, 0)
         left_panel.setSpacing(15)
         
         # Logo & Header
@@ -225,8 +228,8 @@ class MainWindow(QMainWindow):
         logo_container.setSpacing(5)
         
         self.logo = QLabel()
-        if os.path.exists("1024hat.png"):
-            self.logo.setPixmap(QPixmap("1024hat.png").scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        if os.path.exists("3840Wide.png"):
+            self.logo.setPixmap(QPixmap("3840Wide.png").scaled(150, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         else:
             self.logo.setText("🛡️")
             self.logo.setStyleSheet("font-size: 40px;")
@@ -234,9 +237,9 @@ class MainWindow(QMainWindow):
         self.logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_container.addWidget(self.logo)
         
-        title_lbl = QLabel("619 LOG TOOL")
+        title_lbl = QLabel("LOG TOOL")
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_lbl.setStyleSheet(f"font-family: 'Norwester'; font-size: 24px; color: {CAVALIER_BLUE}; margin-bottom: 5px;")
+        title_lbl.setStyleSheet(f"font-family: 'Norwester'; font-size: 20px; color: {CAVALIER_BLUE}; margin-bottom: 5px;")
         logo_container.addWidget(title_lbl)
         
         # Divider - Back below logo and name
@@ -254,10 +257,11 @@ class MainWindow(QMainWindow):
             QFrame {{
                 background-color: {LIGHT_GRAY};
                 border-radius: 8px;
-                padding: 10px;
+                padding: 8px;
             }}
         """)
         storage_layout = QVBoxLayout(storage_box)
+        storage_layout.setContentsMargins(5, 5, 5, 5)
         
         storage_header = QHBoxLayout()
         storage_header.addWidget(QLabel("RIO Storage:"))
@@ -285,6 +289,8 @@ class MainWindow(QMainWindow):
         storage_layout.addWidget(self.storage_bar)
         left_panel.addWidget(storage_box)
 
+        left_panel.addStretch()
+
         self.sync_btn = QPushButton("SYNC NOW")
         self.sync_btn.setFixedHeight(60)
         self.sync_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -309,8 +315,6 @@ class MainWindow(QMainWindow):
         self.del_check.setStyleSheet("font-size: 13px;")
         left_panel.addWidget(self.del_check)
         
-        left_panel.addStretch()
-        
         # Bottom Row: Connection Status (Dot) and Preferences
         bottom_row = QHBoxLayout()
         
@@ -324,7 +328,7 @@ class MainWindow(QMainWindow):
         bottom_row.addWidget(self.status_text)
         bottom_row.addStretch()
         
-        settings_btn = QPushButton("⚙️ Preferences")
+        settings_btn = QPushButton("Preferences")
         settings_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         settings_btn.setStyleSheet(f"""
             QPushButton {{
@@ -342,7 +346,7 @@ class MainWindow(QMainWindow):
         
         left_panel.addLayout(bottom_row)
         
-        layout.addLayout(left_panel, 1)
+        layout.addWidget(left_widget)
 
         # RIGHT SIDE: Console
         right_panel = QVBoxLayout()
