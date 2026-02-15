@@ -1,28 +1,25 @@
 import os
 import sys
-import paramiko
-from stat import S_ISREG
+
+_BASE_PATH = None
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
+    global _BASE_PATH
+    if _BASE_PATH is None:
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            _BASE_PATH = sys._MEIPASS
+        except Exception:
+            _BASE_PATH = os.path.abspath(".")
 
-    return os.path.join(base_path, relative_path)
+    return os.path.join(_BASE_PATH, relative_path)
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QTextEdit, QLabel, QCheckBox, QFileDialog, 
                              QFrame, QDialog, QLineEdit, QFormLayout, QProgressBar)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QPropertyAnimation, QEasingCurve, QSettings, QSize, QTimer
 from PyQt6.QtGui import QFont, QPixmap, QFontDatabase, QColor, QIcon
-
-# --- Mac Cocoa Fix ---
-# This line prevents the "could not find cocoa" error by forcing the plugin path
-import PyQt6
-os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = os.path.join(os.path.dirname(PyQt6.__file__), 'Qt6', 'plugins', 'platforms')
 
 # Branding Colors
 CAVALIER_BLUE = "#0C2340"
@@ -131,11 +128,12 @@ class StorageMonitorWorker(QThread):
         self.running = True
 
     def run(self):
+        import paramiko
         while self.running:
             try:
                 ssh = paramiko.SSHClient()
                 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(self.ip, username="lvuser", password="", timeout=3)
+                ssh.connect(self.ip, username="lvuser", password="", timeout=2)
                 
                 # Get disk usage for /
                 # Output format: Size Used Avail Use% Mounted
@@ -151,7 +149,10 @@ class StorageMonitorWorker(QThread):
             except Exception:
                 self.status_updated.emit(False, "0", "-- / --")
             
-            self.sleep(5) # Check every 5 seconds
+            # Use smaller increments for sleep to remain responsive to stop signal
+            for _ in range(50): 
+                if not self.running: break
+                self.msleep(100)
 
     def stop(self):
         self.running = False
@@ -168,6 +169,8 @@ class SyncWorker(QThread):
         self.delete_after = delete_after
 
     def run(self):
+        import paramiko
+        from stat import S_ISREG
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -480,6 +483,12 @@ class MainWindow(QMainWindow):
         self.sync_btn.setEnabled(True)
 
 if __name__ == "__main__":
+    # Internal dev test entry point
+    import os
+    if sys.platform == "darwin":
+        import PyQt6
+        os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = os.path.join(os.path.dirname(PyQt6.__file__), 'Qt6', 'plugins', 'platforms')
+        
     app = QApplication(sys.argv)
     app.setFont(QFont("Open Sans", 10))
     win = MainWindow()
