@@ -26,31 +26,48 @@ TEXT_COLOR = "#2C3E50"
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Cavalier Sync Settings")
-        self.setFixedSize(400, 250)
+        self.setWindowTitle("Preferences")
+        self.setFixedSize(450, 320)
         self.settings = QSettings("CavalierRobotics", "LogSync")
+        
+        is_dark = self.settings.value("dark_mode", "false") == "true"
+        bg_color = ABBEY_GREY if is_dark else LIGHT_BG
+        txt_color = "white" if is_dark else TEXT_COLOR
+        input_bg = "#2b2b2b" if is_dark else "white"
         
         self.setStyleSheet(f"""
             QDialog {{
-                background-color: {LIGHT_BG};
-                color: {TEXT_COLOR};
+                background-color: {bg_color};
+                color: {txt_color};
             }}
             QLabel {{
-                color: {TEXT_COLOR};
+                color: {'white' if is_dark else CAVALIER_BLUE};
                 font-weight: bold;
+                font-size: 13px;
             }}
             QLineEdit {{
-                border: 1px solid {BORDER_COLOR};
-                border-radius: 4px;
-                padding: 5px;
-                background-color: white;
+                border: 1px solid {BORDER_COLOR if not is_dark else "#606060"};
+                border-radius: 6px;
+                padding: 8px;
+                background-color: {input_bg};
+                color: {txt_color};
+                font-size: 13px;
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {CAVALIER_ORANGE};
+            }}
+            QCheckBox {{
+                color: {txt_color};
+                font-weight: bold;
             }}
             QPushButton {{
-                background-color: {CAVALIER_BLUE};
+                background-color: {CAVALIER_ORANGE};
                 color: white;
                 border: none;
-                border-radius: 4px;
-                padding: 10px;
+                border-radius: 8px;
+                padding: 12px;
+                font-family: 'Norwester';
+                font-size: 16px;
                 font-weight: bold;
             }}
             QPushButton:hover {{
@@ -58,23 +75,40 @@ class SettingsDialog(QDialog):
             }}
         """)
         
-        layout = QFormLayout(self)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(15)
+        layout.setSpacing(20)
+
+        header = QLabel("PREFERENCES")
+        header.setStyleSheet(f"font-family: 'Norwester'; font-size: 18px; color: {CAVALIER_BLUE};")
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+
+        form = QFormLayout()
+        form.setVerticalSpacing(15)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         
         self.ip_input = QLineEdit(self.settings.value("rio_ip", "10.6.19.2"))
         self.path_input = QLineEdit(self.settings.value("save_path", os.path.expanduser("~/Documents/619_Logs")))
+        self.dark_mode_check = QCheckBox("Dark Mode")
+        self.dark_mode_check.setChecked(self.settings.value("dark_mode", "false") == "true")
         
-        layout.addRow("RoboRIO IP:", self.ip_input)
-        layout.addRow("Local Path:", self.path_input)
+        form.addRow("RoboRIO IP:", self.ip_input)
+        form.addRow("Save Location:", self.path_input)
+        form.addRow("", self.dark_mode_check)
         
-        save_btn = QPushButton("Save Settings")
+        layout.addLayout(form)
+        layout.addStretch()
+        
+        save_btn = QPushButton("APPLY")
+        save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         save_btn.clicked.connect(self.save)
-        layout.addRow(save_btn)
+        layout.addWidget(save_btn)
 
     def save(self):
         self.settings.setValue("rio_ip", self.ip_input.text())
         self.settings.setValue("save_path", self.path_input.text())
+        self.settings.setValue("dark_mode", "true" if self.dark_mode_check.isChecked() else "false")
         self.accept()
 
 class StorageMonitorWorker(QThread):
@@ -155,7 +189,70 @@ class MainWindow(QMainWindow):
         self.monitor_worker = None
         self.init_fonts()
         self.setup_ui()
+        self.apply_theme()
         self.start_monitoring()
+
+    def apply_theme(self):
+        is_dark = self.settings.value("dark_mode", "false") == "true"
+        bg_color = ABBEY_GREY if is_dark else LIGHT_BG
+        txt_color = "white" if is_dark else TEXT_COLOR
+        panel_bg = "#3E4446" if is_dark else LIGHT_GRAY
+        border = "#606060" if is_dark else BORDER_COLOR
+        contrast_blue = "#4A90E2" if is_dark else CAVALIER_BLUE
+        
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {bg_color};
+            }}
+            QWidget {{
+                color: {txt_color};
+                font-family: 'Open Sans', 'Segoe UI', sans-serif;
+            }}
+            QCheckBox {{
+                spacing: 8px;
+            }}
+            QCheckBox::indicator {{
+                width: 18px;
+                height: 18px;
+            }}
+        """)
+        
+        self.console.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: {"#2b2b2b" if is_dark else "white"};
+                border: 1px solid {border};
+                border-radius: 10px;
+                color: {txt_color};
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 12px;
+                padding: 10px;
+            }}
+        """)
+        
+        self.storage_box.setStyleSheet(f"""
+            QFrame {{
+                background-color: {panel_bg};
+                border-radius: 8px;
+                padding: 8px;
+            }}
+        """)
+        
+        self.settings_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: transparent;
+                color: {contrast_blue};
+                border: 1px solid {contrast_blue};
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }}
+            QPushButton:hover {{ background-color: {panel_bg}; }}
+        """)
+        
+        self.status_text.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {'#CCCCCC' if is_dark else '#505759'};")
+        self.title_lbl.setStyleSheet(f"font-family: 'Norwester'; font-size: 20px; color: {'white' if is_dark else CAVALIER_BLUE}; margin-bottom: 5px;")
+        self.console_lbl.setStyleSheet(f"font-weight: bold; color: {'#AAAAAA' if is_dark else ABBEY_GREY}; font-size: 12px; text-transform: uppercase;")
+        self.divider_line.setStyleSheet(f"background-color: {border}; height: 1px; border: none;")
 
     def start_monitoring(self):
         if self.monitor_worker:
@@ -193,23 +290,7 @@ class MainWindow(QMainWindow):
     def setup_ui(self):
         self.setWindowTitle("619 Log Tool")
         self.setMinimumSize(900, 500)
-        self.setStyleSheet(f"""
-            QMainWindow {{
-                background-color: {LIGHT_BG};
-            }}
-            QWidget {{
-                color: {TEXT_COLOR};
-                font-family: 'Open Sans', 'Segoe UI', sans-serif;
-            }}
-            QCheckBox {{
-                spacing: 8px;
-            }}
-            QCheckBox::indicator {{
-                width: 18px;
-                height: 18px;
-            }}
-        """)
-
+        
         central = QWidget()
         self.setCentralWidget(central)
         layout = QHBoxLayout(central)
@@ -237,30 +318,22 @@ class MainWindow(QMainWindow):
         self.logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_container.addWidget(self.logo)
         
-        title_lbl = QLabel("LOG TOOL")
-        title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_lbl.setStyleSheet(f"font-family: 'Norwester'; font-size: 20px; color: {CAVALIER_BLUE}; margin-bottom: 5px;")
-        logo_container.addWidget(title_lbl)
+        self.title_lbl = QLabel("LOG TOOL")
+        self.title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_lbl.setStyleSheet(f"font-family: 'Norwester'; font-size: 20px; color: {CAVALIER_BLUE}; margin-bottom: 5px;")
+        logo_container.addWidget(self.title_lbl)
         
         # Divider - Back below logo and name
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Plain)
-        line.setStyleSheet(f"color: {BORDER_COLOR};")
-        logo_container.addWidget(line)
+        self.divider_line = QFrame()
+        self.divider_line.setFrameShape(QFrame.Shape.HLine)
+        self.divider_line.setFrameShadow(QFrame.Shadow.Plain)
+        logo_container.addWidget(self.divider_line)
         
         left_panel.addLayout(logo_container)
 
         # Storage Status Section (Simplified)
-        storage_box = QFrame()
-        storage_box.setStyleSheet(f"""
-            QFrame {{
-                background-color: {LIGHT_GRAY};
-                border-radius: 8px;
-                padding: 8px;
-            }}
-        """)
-        storage_layout = QVBoxLayout(storage_box)
+        self.storage_box = QFrame()
+        storage_layout = QVBoxLayout(self.storage_box)
         storage_layout.setContentsMargins(5, 5, 5, 5)
         
         storage_header = QHBoxLayout()
@@ -285,9 +358,8 @@ class MainWindow(QMainWindow):
                 border-radius: 4px;
             }}
         """)
-        status_layout = QVBoxLayout() # Temp layout removed, replaced with storage_layout
         storage_layout.addWidget(self.storage_bar)
-        left_panel.addWidget(storage_box)
+        left_panel.addWidget(self.storage_box)
 
         left_panel.addStretch()
 
@@ -328,21 +400,10 @@ class MainWindow(QMainWindow):
         bottom_row.addWidget(self.status_text)
         bottom_row.addStretch()
         
-        settings_btn = QPushButton("Preferences")
-        settings_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        settings_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: transparent;
-                color: {CAVALIER_BLUE};
-                border: 1px solid {CAVALIER_BLUE};
-                border-radius: 6px;
-                padding: 6px 10px;
-                font-size: 12px;
-            }}
-            QPushButton:hover {{ background-color: {LIGHT_GRAY}; }}
-        """)
-        settings_btn.clicked.connect(self.open_settings)
-        bottom_row.addWidget(settings_btn)
+        self.settings_btn = QPushButton("Preferences")
+        self.settings_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.settings_btn.clicked.connect(self.open_settings)
+        bottom_row.addWidget(self.settings_btn)
         
         left_panel.addLayout(bottom_row)
         
@@ -350,9 +411,9 @@ class MainWindow(QMainWindow):
 
         # RIGHT SIDE: Console
         right_panel = QVBoxLayout()
-        console_lbl = QLabel("Activity Log")
-        console_lbl.setStyleSheet(f"font-weight: bold; color: {ABBEY_GREY}; font-size: 12px; text-transform: uppercase;")
-        right_panel.addWidget(console_lbl)
+        self.console_lbl = QLabel("Activity Log")
+        self.console_lbl.setStyleSheet(f"font-weight: bold; color: {ABBEY_GREY}; font-size: 12px; text-transform: uppercase;")
+        right_panel.addWidget(self.console_lbl)
 
         self.console = QTextEdit()
         self.console.setReadOnly(True)
@@ -373,6 +434,7 @@ class MainWindow(QMainWindow):
     def open_settings(self):
         dlg = SettingsDialog(self)
         if dlg.exec():
+            self.apply_theme()
             self.start_monitoring()
 
     def start_sync(self):
