@@ -35,7 +35,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Preferences")
-        self.setFixedSize(450, 320)
+        self.setFixedSize(450, 380)
         self.settings = QSettings("CavalierRobotics", "LogSync")
         
         is_dark = self.settings.value("dark_mode", "false") == "true"
@@ -98,11 +98,13 @@ class SettingsDialog(QDialog):
         
         self.ip_input = QLineEdit(self.settings.value("rio_ip", "10.6.19.2"))
         self.path_input = QLineEdit(self.settings.value("save_path", os.path.expanduser("~/Documents/619_Logs")))
+        self.robot_path_input = QLineEdit(self.settings.value("robot_path", "/home/lvuser/akitlogs"))
         self.dark_mode_check = QCheckBox("Dark Mode")
         self.dark_mode_check.setChecked(self.settings.value("dark_mode", "false") == "true")
         
         form.addRow("RoboRIO IP:", self.ip_input)
         form.addRow("Save Location:", self.path_input)
+        form.addRow("Robot Logs:", self.robot_path_input)
         form.addRow("", self.dark_mode_check)
         
         layout.addLayout(form)
@@ -116,15 +118,17 @@ class SettingsDialog(QDialog):
     def save(self):
         self.settings.setValue("rio_ip", self.ip_input.text())
         self.settings.setValue("save_path", self.path_input.text())
+        self.settings.setValue("robot_path", self.robot_path_input.text())
         self.settings.setValue("dark_mode", "true" if self.dark_mode_check.isChecked() else "false")
         self.accept()
 
 class StorageMonitorWorker(QThread):
     status_updated = pyqtSignal(bool, str, str) # connected, usage_percent, raw_stats
     
-    def __init__(self, ip):
+    def __init__(self, ip, robot_path):
         super().__init__()
         self.ip = ip
+        self.robot_path = robot_path
         self.running = True
 
     def run(self):
@@ -135,9 +139,10 @@ class StorageMonitorWorker(QThread):
                 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 ssh.connect(self.ip, username="lvuser", password="", timeout=2)
                 
-                # Get disk usage for /
+                # Get disk usage for the configured log path
                 # Output format: Size Used Avail Use% Mounted
-                stdin, stdout, stderr = ssh.exec_command("df -h / | tail -1 | awk '{print $2, $3, $5}'")
+                cmd = f"df -h '{self.robot_path}' | tail -1 | awk '{{print $2, $3, $5}}'"
+                stdin, stdout, stderr = ssh.exec_command(cmd)
                 stats = stdout.read().decode().strip().split()
                 
                 ssh.close()
@@ -162,10 +167,11 @@ class SyncWorker(QThread):
     finished = pyqtSignal(int)
     error = pyqtSignal(str)
 
-    def __init__(self, ip, local_dir, delete_after):
+    def __init__(self, ip, local_dir, robot_dir, delete_after):
         super().__init__()
         self.ip = ip
         self.local_dir = local_dir
+        self.robot_dir = robot_dir
         self.delete_after = delete_after
 
     def run(self):
@@ -177,12 +183,14 @@ class SyncWorker(QThread):
             ssh.connect(self.ip, username="lvuser", password="", timeout=5)
             sftp = ssh.open_sftp()
             
-            files = sftp.listdir("/home/lvuser/akitlogs")
+            files = sftp.listdir(self.robot_dir)
             if not os.path.exists(self.local_dir): os.makedirs(self.local_dir)
 
             count = 0
             for f in files:
-                remote_path = f"/home/lvuser/akitlogs/{f}"
+                remote_path = f"{self.robot_dir}/{f}" if self.robot_dir.endswith('/') else f"{self.robot_dir}/{f}"
+                # Better safe than sorry with path joining for remote
+                remote_path = os.path.join(self.robot_dir, f).replace("\\", "/") # Ensure forward slashes for Linux
                 local_path = os.path.join(self.local_dir, f)
                 if S_ISREG(sftp.stat(remote_path).st_mode):
                     self.progress.emit(f"Pulling {f}...")
@@ -274,7 +282,8 @@ class MainWindow(QMainWindow):
             self.monitor_worker.wait()
         
         ip = self.settings.value("rio_ip", "10.6.19.2")
-        self.monitor_worker = StorageMonitorWorker(ip)
+        robot_path = self.settings.value("robot_path", "/home/lvuser/akitlogs")
+        self.monitor_worker = StorageMonitorWorker(ip, robot_path)
         self.monitor_worker.status_updated.connect(self.update_status_ui)
         self.monitor_worker.start()
 
@@ -460,8 +469,9 @@ class MainWindow(QMainWindow):
         
         ip = self.settings.value("rio_ip", "10.6.19.2")
         path = self.settings.value("save_path", "./logs")
+        robot_path = self.settings.value("robot_path", "/home/lvuser/akitlogs")
         
-        self.worker = SyncWorker(ip, path, self.del_check.isChecked())
+        self.worker = SyncWorker(ip, path, robot_path, self.del_check.isChecked())
         self.worker.progress.connect(lambda m: self.console.append(f"<span style='color: #505759;'>• {m}</span>"))
         self.worker.finished.connect(self.on_sync_finished)
         self.worker.error.connect(self.on_sync_error)

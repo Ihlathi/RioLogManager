@@ -19,8 +19,8 @@ Download the latest version for your operating system from the [Releases](https:
 3. When you open it for the first time, MacOS will complain about it not being signed. You can override this at the bottom of System Settings/Privacy & Security. **Open**.
 
 ### Windows
-1. Download \`RioLogManager-Windows.exe\`.
-2. Run the executable directly; no installation required.
+1. Download \`RioLogManager-Windows.zip\`.
+2. Extract the application and run the executable; no installation required.
 2. Windows will complain about the app not being signed—you'll have to override this.
 
 ## Usage
