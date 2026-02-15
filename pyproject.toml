@@ -1,7 +1,11 @@
 [project]
-name = "logapp"
+name = "619-log-app"
 version = "0.1.0"
-description = "Add your description here"
+description = "Quick RIO log manager for FRC"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "PyQt6>=6.6.1",
+    "paramiko>=3.4.0",
+    "pyinstaller>=6.4.0",
+]
