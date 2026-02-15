@@ -2,11 +2,22 @@ import os
 import sys
 import paramiko
 from stat import S_ISREG
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QTextEdit, QLabel, QCheckBox, QFileDialog, 
                              QFrame, QDialog, QLineEdit, QFormLayout, QProgressBar)
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QPropertyAnimation, QEasingCurve, QSettings, QSize, QTimer
-from PyQt6.QtGui import QFont, QPixmap, QFontDatabase, QColor
+from PyQt6.QtGui import QFont, QPixmap, QFontDatabase, QColor, QIcon
 
 # --- Mac Cocoa Fix ---
 # This line prevents the "could not find cocoa" error by forcing the plugin path
@@ -284,11 +295,12 @@ class MainWindow(QMainWindow):
 
     def init_fonts(self):
         # Assumes fonts are in the same folder as the script
-        QFontDatabase.addApplicationFont("OpenSans-Regular.ttf")
-        QFontDatabase.addApplicationFont("Norwester.otf")
+        QFontDatabase.addApplicationFont(resource_path("OpenSans-Regular.ttf"))
+        QFontDatabase.addApplicationFont(resource_path("Norwester.otf"))
 
     def setup_ui(self):
         self.setWindowTitle("619 Log Tool")
+        self.setWindowIcon(QIcon(resource_path("1024hat.png")))
         self.setMinimumSize(900, 500)
         
         central = QWidget()
@@ -309,8 +321,9 @@ class MainWindow(QMainWindow):
         logo_container.setSpacing(5)
         
         self.logo = QLabel()
-        if os.path.exists("3840Wide.png"):
-            self.logo.setPixmap(QPixmap("3840Wide.png").scaled(150, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        logo_img_path = resource_path("3840Wide.png")
+        if os.path.exists(logo_img_path):
+            self.logo.setPixmap(QPixmap(logo_img_path).scaled(150, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         else:
             self.logo.setText("🛡️")
             self.logo.setStyleSheet("font-size: 40px;")

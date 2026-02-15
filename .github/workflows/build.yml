@@ -31,7 +31,9 @@ jobs:
         run: |
           uv run pyinstaller --onefile --windowed `
             --name "619LogTool-Win" `
+            --icon "1024hat.png" `
             --add-data "3840Wide.png;." `
+            --add-data "1024hat.png;." `
             --add-data "Norwester.otf;." `
             --add-data "OpenSans-Regular.ttf;." `
             main.py
@@ -41,13 +43,23 @@ jobs:
         run: |
           uv run pyinstaller --onefile --windowed \
             --name "619LogTool-Mac" \
+            --icon "1024hat.png" \
             --add-data "3840Wide.png:." \
+            --add-data "1024hat.png:." \
             --add-data "Norwester.otf:." \
             --add-data "OpenSans-Regular.ttf:." \
             main.py
 
-      - name: Upload Artifacts
+      - name: Upload Artifacts (Windows)
+        if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: 619LogTool-${{ matrix.os }}
-          path: dist/*
+          name: 619LogTool-Windows
+          path: dist/*.exe
+
+      - name: Upload Artifacts (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: 619LogTool-macOS
+          path: dist/*.app
