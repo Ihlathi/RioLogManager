@@ -702,8 +702,14 @@ class MainWindow(QMainWindow):
 
         self.local_table = QTableWidget(0, 3)
         self.local_table.setHorizontalHeaderLabels(["Name", "Size", "Date Modified"])
-        self.local_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.local_table.horizontalHeader().setStretchLastSection(True)
+        local_header = self.local_table.horizontalHeader()
+        local_header.setMinimumSectionSize(20)
+        local_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        local_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        self.local_table.setColumnWidth(1, 60)
+        local_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        self.local_table.setColumnWidth(2, 120)
+        local_header.setSectionsMovable(False)
         self.local_table.verticalHeader().setVisible(False)
         self.local_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.local_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -733,8 +739,14 @@ class MainWindow(QMainWindow):
 
         self.remote_table = QTableWidget(0, 3)
         self.remote_table.setHorizontalHeaderLabels(["Name", "Size", "Date Modified"])
-        self.remote_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.remote_table.horizontalHeader().setStretchLastSection(True)
+        remote_header = self.remote_table.horizontalHeader()
+        remote_header.setMinimumSectionSize(20)
+        remote_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        remote_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        self.remote_table.setColumnWidth(1, 60)
+        remote_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        self.remote_table.setColumnWidth(2, 120)
+        remote_header.setSectionsMovable(False)
         self.remote_table.verticalHeader().setVisible(False)
         self.remote_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.remote_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -784,10 +796,16 @@ class MainWindow(QMainWindow):
         self.local_table.setRowCount(len(files))
         for i, f in enumerate(sorted(files, key=lambda x: x['mtime'], reverse=True)):
             self.local_table.setItem(i, 0, SortableTableWidgetItem(f['name'], f['name']))
+            
             size_mb = f['size'] / (1024 * 1024)
-            self.local_table.setItem(i, 1, SortableTableWidgetItem(f"{size_mb:.2f} MB", f['size']))
+            size_item = SortableTableWidgetItem(f"{size_mb:.2f} MB", f['size'])
+            size_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.local_table.setItem(i, 1, size_item)
+            
             date = QDateTime.fromSecsSinceEpoch(int(f['mtime'])).toString("yyyy-MM-dd HH:mm:ss")
-            self.local_table.setItem(i, 2, SortableTableWidgetItem(date, f['mtime']))
+            date_item = SortableTableWidgetItem(date, f['mtime'])
+            date_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.local_table.setItem(i, 2, date_item)
         self.local_table.setSortingEnabled(True)
 
     def filter_local_logs(self):
@@ -859,10 +877,16 @@ class MainWindow(QMainWindow):
         self.remote_table.setRowCount(len(files))
         for i, f in enumerate(sorted(files, key=lambda x: x['mtime'], reverse=True)):
             self.remote_table.setItem(i, 0, SortableTableWidgetItem(f['name'], f['name']))
+            
             size_mb = f['size'] / (1024 * 1024)
-            self.remote_table.setItem(i, 1, SortableTableWidgetItem(f"{size_mb:.2f} MB", f['size']))
+            size_item = SortableTableWidgetItem(f"{size_mb:.2f} MB", f['size'])
+            size_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.remote_table.setItem(i, 1, size_item)
+            
             date = QDateTime.fromSecsSinceEpoch(int(f['mtime'])).toString("yyyy-MM-dd HH:mm:ss")
-            self.remote_table.setItem(i, 2, SortableTableWidgetItem(date, f['mtime']))
+            date_item = SortableTableWidgetItem(date, f['mtime'])
+            date_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.remote_table.setItem(i, 2, date_item)
         self.remote_table.setSortingEnabled(True)
 
     def filter_remote_logs(self):
@@ -930,6 +954,7 @@ class MainWindow(QMainWindow):
 
     def start_sync(self, file_list=None):
         self.sync_btn.setEnabled(False)
+        self.sync_btn.setText("SYNCING...")
         self.console.clear()
         self.console.append("<b style='color: #0C2340;'>Initializing connection...</b>")
         
@@ -937,10 +962,15 @@ class MainWindow(QMainWindow):
         path = self.settings.value("save_path", os.path.expanduser("~/Documents/619_Logs"))
         robot_path = self.settings.value("robot_path", "/home/lvuser/akitlogs")
         
-        # Only delete after sync if we are doing a full sync AND the checkbox is checked
-        delete_after = self.del_check.isChecked() if file_list is None else False
+        # Only delete after sync if we are doing a full sync (list is None) AND the checkbox is checked
+        # Note: clicked signal passes a bool, so we check if it's specifically a list
+        is_partial_sync = isinstance(file_list, list)
+        delete_after = self.del_check.isChecked() if not is_partial_sync else False
         
-        self.worker = SyncWorker(ip, path, robot_path, delete_after, selected_files=file_list)
+        # Ensure we pass None if it's just the clicked signal's boolean
+        worker_file_list = file_list if is_partial_sync else None
+        
+        self.worker = SyncWorker(ip, path, robot_path, delete_after, selected_files=worker_file_list)
         self.worker.progress.connect(lambda m: self.console.append(f"<span style='color: #505759;'>• {m}</span>"))
         self.worker.finished.connect(self.on_sync_finished)
         self.worker.error.connect(self.on_sync_error)
@@ -954,6 +984,7 @@ class MainWindow(QMainWindow):
 
     def on_sync_finished(self, count):
         self.console.append(f"\n<b style='color: #27AE60;'>✓ Success: {count} logs synchronized.</b>")
+        self.sync_btn.setText("SYNC NOW")
         self.sync_btn.setEnabled(True)
         self.refresh_local_logs()
         self.refresh_remote_logs()
@@ -961,6 +992,7 @@ class MainWindow(QMainWindow):
     def on_sync_error(self, error):
         self.console.append(f"\n<b style='color: #C0392B;'>⚠ Error: {error}</b>")
         self.console.append("<span style='color: #E67E22;'>Please check RoboRIO IP and Network settings.</span>")
+        self.sync_btn.setText("SYNC NOW")
         self.sync_btn.setEnabled(True)
 
 if __name__ == "__main__":
