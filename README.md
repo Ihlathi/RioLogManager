@@ -6,7 +6,9 @@ A lightweight PyQt6 application designed for FRC teams to quickly synchronize an
 
 ## Features
 - **Real-time Monitoring:** Tracks RoboRIO disk usage and connection status.
-- **Fast Sync:** Pulls logs from \`/home/lvuser/akitlogs\` via SFTP.
+- **Fast Sync:** Pulls logs from the robot via SFTP.
+- **Log Management:** Browse, search, and manage logs stored both locally and on the RoboRIO.
+- **AdvantageScope Integration:** Directly open local logs in AdvantageScope from within the app.
 - **Auto-Cleanup:** Option to delete logs from the RIO after a successful sync.
 - **Dark Mode:** Support for both light and dark UI themes.
 
@@ -14,7 +16,7 @@ A lightweight PyQt6 application designed for FRC teams to quickly synchronize an
 Download the latest version for your operating system from the [Releases](https://github.com/Ihlathi/RioLogManager/releases) page.
 
 ### macOS
-1. Download the \`RioLogManager-macOS.zip\`.
+1. Download \`RioLogManager-macOS.zip\`.
 2. Extract the application and move it to your \`Applications\` folder (if you would like).
 3. When you open it for the first time, MacOS will complain about it not being signed. You can override this at the bottom of System Settings/Privacy & Security. **Open**.
 
@@ -28,6 +30,8 @@ Once launched, ensure you are connected to the robot radio or via USB-B.
 
 ### Configuration
 Access the **Preferences** menu to set:
-- **RoboRIO IP:** Defaults to \`10.6.19.2\`.
+- **RoboRIO IP:** Defaults to `10.6.19.2`.
 - **Save Location:** Local directory where logs will be stored.
+- **Robot Logs:** Remote path on the RIO where logs are located.
+- **AdvantageScope Path:** Location of the AdvantageScope executable.
 - **Dark Mode:** Toggle UI appearance.
